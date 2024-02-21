@@ -3,6 +3,7 @@
 import argparse
 import json
 import re
+import shlex
 import subprocess
 from sys import exit
 
@@ -129,13 +130,13 @@ def go():
 
     # Begin and seek.
     # We build the shell command out of its arguments and join them at the end.
-    prompt = ['ffmpeg']
+    prompt = ["ffmpeg"]
     if not args.verbose:
-        prompt += '-loglevel quiet', '-stats'
+        prompt += "-loglevel", "quiet", "-stats"
     if args.start_ts != "START":
-        prompt += f'-ss {args.start_ts}',
+        prompt += "-ss", args.start_ts,
     if args.end_ts != "END":
-        prompt += f'-to {args.end_ts}',
+        prompt += "-to", args.end_ts,
 
     # Burn subs is an evil option that needs extra arguments inserted in places
     # outside of the video filter section. We need to copy the seeked(?)
@@ -143,15 +144,15 @@ def go():
     # loading the video to get them to match up or at least that's what ffmpeg
     # wiki says. I didn't try it and see what would happen otherwise.
     if args.burn_subs:
-        prompt += '-copyts',
+        prompt += "-copyts",
 
-    prompt += f'-i "{args.input}"',
+    prompt += "-i", args.input,
 
     # ...but we don't need to if the clip starts from the input file's start.
     if args.burn_subs and args.start_ts != "START":
-        prompt += f'-ss {args.start_ts}',
+        prompt += "-ss", args.start_ts,
 
-    filter_complex = ['[0:v]copy']
+    filter_complex = ["[0:v]copy"]
     if args.burn_subs:
         # Due to `overlay` needing [video][subtitle] argument order, I
         # can't use the implicit connection of the video stream, as [subtitle]
@@ -159,49 +160,49 @@ def go():
         # I copy the incoming unnamed video to a named link and use it
         # within the section.
         if is_picture_subs(args.input, int(args.sub_stream)):
-            filter_complex += 'copy[v1]', f'[v1][0:s:{args.sub_stream}]overlay',
+            filter_complex += "copy[v1]", f"[v1][0:s:{args.sub_stream}]overlay",
         else:
-            filter_complex += f'subtitles="{re.escape(args.input)}"{f":stream_index={args.sub_stream}"}',  # noqa: E501
+            filter_complex += f"subtitles={re.escape(args.input)}:stream_index={args.sub_stream}",  # noqa: E501
     if args.resize:
         # If burning and resizing, resizing first provides the best quality.
         # However: if the subtitles are using transforms, the resize will mess
         # those up, so this should come after.
-        filter_complex += f'scale={args.resize}', 'setsar=1:1'
+        filter_complex += f"scale={args.resize}", "setsar=1:1"
     if len(filter_complex) > 0:
-        prompt += '-filter_complex', ','.join(filter_complex)
+        prompt += "-filter_complex", ",".join(filter_complex)
 
     # And again!
     audio_filters = []
     if args.normalize_audio:
         # -24 for movies and TV or -16 for music and podcasts.
-        audio_filters += 'loudnorm=i=-24',
+        audio_filters += "loudnorm=i=-24",
     if len(audio_filters) > 0:
-        prompt += '-af', ','.join(audio_filters)
+        prompt += "-af", ",".join(audio_filters)
 
     # If I ever add more formats this can easily be made a match statement.
     if args.quick_cut:  # Some duplication here but...
-        prompt += '-c:v copy',
+        prompt += "-c:v copy",
     elif args.x264:
         prompt += (
-            '-c:v libx264',
-            f'-crf {args.crf}',
-            f'-preset {args.preset}',
-            '-tag:v avc1',
-            '-pix_fmt yuv420p',
+            "-c:v", "libx264",
+            "-crf", args.crf,
+            "-preset", args.preset,
+            "-tag:v", "avc1",
+            "-pix_fmt", "yuv420p",
         )
     else:  # currently implicit x265
         prompt += (
-            '-c:v libx265',
-            f'-crf {args.crf}',
-            f'-preset {args.preset}',
-            '-tag:v hvc1'
+            "-c:v", "libx265",
+            "-crf", args.crf,
+            "-preset", args.preset,
+            "-tag:v", "hvc1",
         )
         # x265 requires additional work to silence its extra output.
         if not args.verbose:
-            prompt += '-x265-params log-level=quiet',
+            prompt += "-x265-params", "log-level=quiet",
 
     # Strip chapter data. At this point it's misaligned anyway.
-    prompt += '-map_chapters -1',
+    prompt += "-map_chapters", "-1",
 
     # There used to be more audio options here but the issue I created
     # them to solve turned out to be the result of an old bug in ffmpeg
@@ -211,19 +212,18 @@ def go():
     #     prompt += '-map', f'a:{args.audio_stream}'
     if args.recode_audio:
         # I don't know what happens if you feed in something surround-sound.
-        prompt += '-c:a aac_at',
+        prompt += "-c:a", "aac_at",
     else:
-        prompt += '-c:a copy',
+        prompt += "-c:a", "copy",
 
-    # TODO: Can I set up the prompt to be used with non-shell `run`?
-    prompt += '"' + args.output + '"',
-    command = " ".join(prompt)
+    # Finally, the output file.
+    prompt += args.output,
 
     if args.simulate:
-        print("\n", command, "\n")
+        print(shlex.join(prompt))
         exit()
 
-    subprocess.run(command, shell=True)
+    subprocess.run(prompt)
 
 
 if __name__ == "__main__":

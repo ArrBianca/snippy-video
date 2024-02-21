@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "snippy-video"
-version = "1.0.1"
+version = "1.0.2"
 description = ""
 authors = ["June <june@peanut.one>"]
 readme = "README.md"
