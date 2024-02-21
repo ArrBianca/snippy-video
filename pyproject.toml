@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "snippy-video"
+version = "1.0.0"
+description = ""
+authors = ["June <june@peanut.one>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+argcomplete = "^3.2.1"
+
+[tool.poetry.scripts]
+snippy = "snippy_video:go"
+framey = "snippy_video.frames:go"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
