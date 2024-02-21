@@ -1,17 +1,19 @@
 #! /usr/bin/env python3
 # PYTHON_ARGCOMPLETE_OK
-from argparse import ArgumentParser
+import argparse
 import json
-from re import escape
-from subprocess import run
+import re
+import subprocess
 from sys import exit
 
 import argcomplete
 
 
+# FIXME: Only detects PGS. Look up what other picture formats there are and
+#   check against all of them.
 # TODO: rename this function
 def is_picture_subs(filename: str, index: int):
-    media_info = run(
+    media_info = subprocess.run(
         ["mediainfo", "--Output=JSON", filename],
         capture_output=True
     ).stdout
@@ -25,7 +27,7 @@ def is_picture_subs(filename: str, index: int):
 
 
 def go():
-    parser = ArgumentParser()
+    parser = argparse.ArgumentParser()
 
     parser.add_argument("input", help="The video file input")
     # I don't know if these guys are inclusive or exclusive ⬇️
@@ -159,7 +161,7 @@ def go():
         if is_picture_subs(args.input, int(args.sub_stream)):
             filter_complex += 'copy[v1]', f'[v1][0:s:{args.sub_stream}]overlay',
         else:
-            filter_complex += f'subtitles="{escape(args.input)}"{f":stream_index={args.sub_stream}"}',  # noqa: E501
+            filter_complex += f'subtitles="{re.escape(args.input)}"{f":stream_index={args.sub_stream}"}',  # noqa: E501
     if args.resize:
         # If burning and resizing, resizing first provides the best quality.
         # However: if the subtitles are using transforms, the resize will mess
@@ -213,6 +215,7 @@ def go():
     else:
         prompt += '-c:a copy',
 
+    # TODO: Can I set up the prompt to be used with non-shell `run`?
     prompt += '"' + args.output + '"',
     command = " ".join(prompt)
 
@@ -220,7 +223,7 @@ def go():
         print("\n", command, "\n")
         exit()
 
-    run(command, shell=True)
+    subprocess.run(command, shell=True)
 
 
 if __name__ == "__main__":
