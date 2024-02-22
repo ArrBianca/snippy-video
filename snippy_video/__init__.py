@@ -166,13 +166,14 @@ def go():
         if is_picture_subs(args.input, int(args.sub_stream)):
             filter_complex += "copy[v1]", f"[v1][0:s:{args.sub_stream}]overlay",
         else:
-            filter_complex += f"subtitles={re.escape(args.input)}:stream_index={args.sub_stream}",  # noqa: E501
+            filter_complex += (f"subtitles=f={re.escape(args.input)}"
+                               f":stream_index={args.sub_stream}"),
     if args.resize:
         # If burning and resizing, resizing first provides the best quality.
         # However: if the subtitles are using transforms, the resize will mess
         # those up, so this should come after.
         filter_complex += f"scale={args.resize}", "setsar=1:1"
-    if len(filter_complex) > 0:
+    if len(filter_complex) > 1:
         prompt += "-filter_complex", ",".join(filter_complex)
 
     # And again!
@@ -185,7 +186,7 @@ def go():
 
     # If I ever add more formats this can easily be made a match statement.
     if args.quick_cut:  # Some duplication here but...
-        prompt += "-c:v copy",
+        prompt += "-c:v", "copy",
     elif args.x264:
         prompt += (
             "-c:v", "libx264",
