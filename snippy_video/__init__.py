@@ -27,7 +27,7 @@ def is_picture_subs(filename: str, index: int):
     return subtitle_tracks[index]["Format"] == "PGS"
 
 
-def go():
+def process_cli():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("input", help="The video file input")
@@ -121,7 +121,11 @@ def go():
     )
 
     argcomplete.autocomplete(parser)
-    args = parser.parse_args()
+    return parser.parse_args()
+
+
+def go():
+    args = process_cli()
     # print(args)
 
     # what am i doing
